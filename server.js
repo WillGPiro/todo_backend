@@ -51,7 +51,7 @@ app.post('/api/todos', async (req, res) => {
 
         const result = await client.query(`
             insert into todos (task, complete)
-            values ('${body.req.task}',false)
+            values ('${req.body.task}',false)
             returning *;  
         `,
 
