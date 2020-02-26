@@ -21,12 +21,12 @@ app.use(express.json()); // enable reading incoming json data
 app.use(express.urlencoded({ extended: true }));
 
 // *** TODOS ***
-//this get request returns a list of todos.
+//this get request returns a list of todos. It does that by using the SQL query callsed "select * from " *=all and rom 
 app.get('/api/todos', async (req, res) => {
 
     try {
         const result = await client.query(`
-            select * from todos;
+            SELECT * FROM todos;
         `);
 
         res.json(result.rows);
@@ -39,7 +39,7 @@ app.get('/api/todos', async (req, res) => {
     }
 
 });
-
+//creates a new task post throws something new. 
 app.post('/api/todos', async (req, res) => {
     try {
         
@@ -48,7 +48,7 @@ app.post('/api/todos', async (req, res) => {
             values ($1, $2)
             returning *;  
         `,
-
+//When using this post request the complete value is automatically set to false. See below. Whereas complete is set automatically to false as it is not attempting to grab information from the user. 
         [req.body.task, false]);
 
         res.json(result.rows[0]);
@@ -60,15 +60,19 @@ app.post('/api/todos', async (req, res) => {
         });
     }
 });
-
+//put is = update. :id represent a dynamic id number like "4" UPDATE the todo table an SET the complete row. 
 app.put('/api/todos/:id', async (req, res) => {
     const id = req.params.id;
     const todo = req.body;
-
+console.log('update', todo);
     try {
         const result = await client.query(`
+        UPDATE todos
+        SET complete=$1
+        WHERE id = ${req.params.id}
+        RETURNING *;
             
-        `, [/* pass in data */]);
+        `, [req.body.complete]);
 
         res.json(result.rows[0]);
     }
@@ -85,7 +89,7 @@ app.delete('/api/todos/:id', async (req, res) => {
 
     try {
         const result = await client.query(`
-
+        DELETE from todos WHERE id=${req.params.id}
         `, [/* pass data */]);
 
         res.json(result.rows[0]);
