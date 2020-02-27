@@ -24,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const createAuthRoutes = require('./lib/auth/create-auth-routes');
 
-const authRoutes = required('./lib/auth/'({
+const authRoutes = createAuthRoutes({
     selectUser(email) {
         return client.query(`
         SELECT id, email, hash
@@ -32,7 +32,7 @@ const authRoutes = required('./lib/auth/'({
         WHERE email = $1
         `,
         [email]
-        ).then(results => result[0]);
+        ).then(results => results.rows[0]);
     },
     insertUser(user, hash) {
         return client.query(`
@@ -40,12 +40,12 @@ const authRoutes = required('./lib/auth/'({
             VALUES ($1, $2)
             RETURNING id, email;
             `,
-            [user.email, hash]
+        [user.email, hash]
         ).then(result => result.rows[0]);
     }
 });
 
-//prior to ensure authRouts, but after middleware.
+//prior to ensure authRouts, but after middleware./ .use = use this path (first param) to reach this other endpoint which performs some sort of request
 app.use('/api/auth', authRoutes);
 
 //for all routes and on every request ensure there is a token.
@@ -59,7 +59,7 @@ app.get('/api/todos', async (req, res) => {
 
     try {
         const result = await client.query(`
-            SELECT * FROM todos where users_id=$1
+            SELECT * FROM todos where user_id=$1
         `, [req.usersId]);
         
         //respond to the client with that data
@@ -78,12 +78,12 @@ app.post('/api/todos', async (req, res) => {
     try {
         
         const result = await client.query(`
-            insert into todos (task, complete)
-            values ($1, $2, $3) 
+            insert into todos (task, complete, user_id)
+            values ($1, false, $2) 
             returning *;  
         `,
 //When using this post request the complete value is automatically set to false. See below. Whereas complete is set automatically to false as it is not attempting to grab information from the user. 
-        [req.body.task, false, req.userId]);
+        [req.body.task, req.userId]);
 
         res.json(result.rows[0]);
     }

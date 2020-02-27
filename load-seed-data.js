@@ -11,7 +11,7 @@ async function run() {
         await client.connect();
 
         await client.query(`
-            INSERT INTO user (email, hash)
+            INSERT INTO users (email, hash)
             VALUES ($1, $2);
             `,
 
