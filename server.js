@@ -20,15 +20,49 @@ app.use(express.json()); // enable reading incoming json data
 
 app.use(express.urlencoded({ extended: true }));
 
+//Auth Routes
+
+const createAuthRoutes = require('./lib/auth/create-auth-routes');
+
+const authRoutes = required('./lib/auth/'({
+    selectUser(email) {
+        return client.query(`
+        SELECT id, email, hash
+        FROM users
+        WHERE email = $1
+        `,
+        [email]
+        ).then(results => result[0]);
+    },
+    insertUser(user, hash) {
+        return client.query(`
+            INSERT into users (email,hash)
+            VALUES ($1, $2)
+            RETURNING id, email;
+            `,
+            [user.email, hash]
+        ).then(result => result.rows[0]);
+    }
+});
+
+//prior to ensure authRouts, but after middleware.
+app.use('/api/auth', authRoutes);
+
+//for all routes and on every request ensure there is a token.
+const ensureAuth = require('./lib/auth/ensure-auth');
+
+app.use('/api', ensureAuth);
+
 // *** TODOS ***
 //this get request returns a list of todos. It does that by using the SQL query callsed "select * from " *=all and rom 
 app.get('/api/todos', async (req, res) => {
 
     try {
         const result = await client.query(`
-            SELECT * FROM todos;
-        `);
-
+            SELECT * FROM todos where users_id=$1
+        `, [req.usersId]);
+        
+        //respond to the client with that data
         res.json(result.rows);
     }
     catch (err) {
@@ -45,11 +79,11 @@ app.post('/api/todos', async (req, res) => {
         
         const result = await client.query(`
             insert into todos (task, complete)
-            values ($1, $2)
+            values ($1, $2, $3) 
             returning *;  
         `,
 //When using this post request the complete value is automatically set to false. See below. Whereas complete is set automatically to false as it is not attempting to grab information from the user. 
-        [req.body.task, false]);
+        [req.body.task, false, req.userId]);
 
         res.json(result.rows[0]);
     }
